@@ -1,0 +1,82 @@
+Weather Pattern Simulation
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define the atmospheric state variables
+n_x = 50  # Number of grid cells in x direction
+n_y = 50  # Number of grid cells in y direction
+dx = 10000 / (n_x - 1)  # Grid spacing in x direction
+dy = 10000 / (n_y - 1)  # Grid spacing in y direction
+x = np.linspace(0, 10000, n_x)  # Grid points in x direction
+y = np.linspace(0, 10000, n_y)  # Grid points in y direction
+
+# Initial temperature and pressure fields
+T = np.zeros((n_x, n_y))
+P = np.zeros((n_x, n_y))
+
+# Parameters for the governing equations
+u_diff = 0.1  # Horizontal diffusion coefficient for temperature
+v_diff = 0.1  # Vertical diffusion coefficient for temperature
+p_diff = 0.2  # Laplacian coefficient for pressure
+g = 9.81  # Gravitational acceleration
+
+# Define u and v
+u = np.zeros_like(T)  # Horizontal velocity
+v = np.zeros_like(T)  # Vertical velocity
+
+# Governing equations for atmospheric dynamics
+def update_temperature(T, u, v):
+    """Update the temperature field using the advection-diffusion equation."""
+    T_new = T.copy()
+
+    # Horizontal advection
+    u_temp = np.roll(u, 1)
+    T_new[:, 1:] -= u_diff * (T - u_temp) / dx
+
+    # Vertical advection
+    v_temp = np.roll(v, 1, axis=0)
+    T_new[:-1, :] -= v_diff * (T - v_temp) / dy
+
+    # Diffusion
+    T_new[:, 1:-1] += u_diff * (T[:, 2:] - T[:, :-2]) / 2 * dx
+    T_new[:-1, 1:-1] += v_diff * (T[1:, :] - T[:-1, :]) / 2 * dy
+
+    return T_new
+
+def update_pressure(P, u, v):
+    """Update the pressure field using the Laplacian equation."""
+    P_new = P.copy()
+
+    # Laplacian
+    P_new += p_diff * (P[1:, 1:] + P[:-1, 1:] + P[1:, :-1] + P[:-1, :-1] - 4 * P) / dx**2
+
+    return P_new
+
+# Simulation loop
+t_max = 100  # Maximum simulation time
+dt = 0.1  # Time step
+n_steps = int(t_max / dt)  # Number of time steps
+
+T_history = []  # Store the temperature history
+P_history = []  # Store the pressure history
+
+for t in range(n_steps):
+    # Update temperature and pressure fields
+    T = update_temperature(T, u, v)
+    P = update_pressure(P, u, v)
+
+    # Store temperature and pressure history
+    T_history.append(T.copy())
+    P_history.append(P.copy())
+
+# Visualize the results
+plt.figure(figsize=(10, 4))
+plt.subplot(121)
+plt.contourf(x, y, T_history[-1])
+plt.title('Temperature')
+
+plt.subplot(122)
+plt.contourf(x, y, P_history[-1])
+plt.title('Pressure')
+
+plt.show()
